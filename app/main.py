@@ -3,11 +3,24 @@ from app.business_rules import validate_status_transition
 from app.models import TaskCreate, TaskResponse, TaskStatus, TaskPriority, TaskUpdate
 from app import storage
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Task Tracker API",
     description="Module 1 Task Tracker REST API skeleton (file-based JSON storage).",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:5173",
+        "null",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

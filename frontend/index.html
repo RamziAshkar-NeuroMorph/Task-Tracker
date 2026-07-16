@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Tracker</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f3f6fb;
+            --surface: #ffffff;
+            --border: #d9e2ec;
+            --text: #243b53;
+            --muted: #627d98;
+            --accent: #2563eb;
+            --accent-soft: #dbeafe;
+            --high: #dc2626;
+            --medium: #d97706;
+            --low: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color: white;
+            padding: 2rem 1.5rem;
+        }
+
+        .app-header h1 {
+            margin: 0 0 0.35rem;
+            font-size: 2rem;
+        }
+
+        .app-header p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-create {
+            border: none;
+            background: white;
+            color: var(--accent);
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-create:hover {
+            background: #eff6ff;
+        }
+
+        main {
+            padding: 1.5rem;
+        }
+
+        .board-shell {
+            position: relative;
+            min-height: 280px;
+            overflow: hidden;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(220px, 1fr));
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .error-overlay {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: min(320px, calc(100% - 2rem));
+            z-index: 5;
+            transform: translateX(110%);
+            transition: transform 220ms ease;
+            pointer-events: none;
+        }
+
+        .error-overlay.is-visible {
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .error-overlay .state {
+            margin: 0;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+            text-align: left;
+        }
+
+        .column {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.9rem;
+        }
+
+        .column-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .count {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-radius: 999px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .card {
+            background: #fcfdff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .state {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            text-align: center;
+        }
+
+        .state-loading {
+            color: var(--accent);
+        }
+
+        .state-error {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: var(--high);
+        }
+
+        .state-title {
+            margin: 0 0 0.35rem;
+            font-size: 1.1rem;
+        }
+
+        .state-message {
+            margin: 0 0 0.9rem;
+            color: var(--muted);
+        }
+
+        .state-actions {
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-retry {
+            border: none;
+            background: var(--high);
+            color: white;
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-retry:hover {
+            background: #b91c1c;
+        }
+
+        .column-placeholder {
+            margin: 0;
+            padding: 0.8rem 0;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            background: #fbfdff;
+            color: var(--muted);
+            text-align: center;
+            font-size: 0.93rem;
+        }
+
+        .board-notice {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            max-width: min(320px, calc(100% - 2rem));
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: var(--high);
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            animation: boardNoticeIn 220ms ease-out forwards, boardNoticeOut 220ms ease-in 4.78s forwards;
+        }
+
+        @keyframes boardNoticeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes boardNoticeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .board-empty {
+            margin: 0 0 1rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .card.dragging {
+            opacity: 0.6;
+            transform: scale(0.98);
+        }
+
+        .column.drag-over {
+            outline: 2px dashed var(--accent);
+            outline-offset: 2px;
+            background: #f8fbff;
+        }
+
+        .card-title {
+            margin: 0 0 0.35rem;
+            font-size: 1rem;
+        }
+
+        .card-description {
+            margin: 0 0 0.75rem;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.4;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 0.8rem;
+        }
+
+        .priority {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: var(--high);
+        }
+
+        .priority-medium {
+            background: #fef3c7;
+            color: var(--medium);
+        }
+
+        .priority-low {
+            background: #dcfce7;
+            color: var(--low);
+        }
+
+        .btn-edit {
+            border: none;
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-edit:hover {
+            background: #1d4ed8;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 20;
+        }
+
+        .modal-backdrop.is-open {
+            display: flex;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .modal {
+            width: min(560px, 100%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 24px 50px rgba(15, 23, 42, 0.24);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .modal-close {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-size: 1.35rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text);
+        }
+
+        .task-form {
+            padding: 1.1rem 1.25rem 1.25rem;
+        }
+
+        .form-alert {
+            margin-bottom: 0.9rem;
+            padding: 0.75rem 0.85rem;
+            border-radius: 10px;
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: var(--high);
+            font-size: 0.95rem;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-bottom: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.7rem 0.8rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: var(--text);
+        }
+
+        .field textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+
+        .btn-secondary,
+        .btn-primary {
+            border: none;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        @media (max-width: 900px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <div>
+                <h1>Task Tracker</h1>
+                <p>Keep work moving with a simple Kanban view.</p>
+            </div>
+            <button class="btn-create" id="new-task-button" type="button" data-action="new-task">New Task</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="board-shell">
+            <section id="board" class="board" aria-label="Task board"></section>
+            <div id="error-overlay" class="error-overlay" aria-live="assertive" aria-hidden="true"></div>
+        </div>
+    </main>
+
+    <div id="task-modal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-header">
+                <h2 id="modal-title">New Task</h2>
+                <button class="modal-close" id="modal-close" type="button" aria-label="Close">×</button>
+            </div>
+            <form id="task-form" class="task-form">
+                <div id="form-alert" class="form-alert" role="alert" hidden></div>
+                <input type="hidden" id="task-id" name="taskId">
+
+                <label class="field" for="task-title">
+                    Title
+                    <input id="task-title" name="title" type="text" required>
+                </label>
+
+                <label class="field" for="task-description">
+                    Description
+                    <textarea id="task-description" name="description"></textarea>
+                </label>
+
+                <label class="field" for="task-status">
+                    Status
+                    <select id="task-status" name="status">
+                        <option value="ToDo">To Do</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Done">Done</option>
+                    </select>
+                </label>
+
+                <label class="field" for="task-priority">
+                    Priority
+                    <select id="task-priority" name="priority">
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </label>
+
+                <label class="field" for="task-assignee">
+                    Assignee
+                    <input id="task-assignee" name="assignee" type="text">
+                </label>
+
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="cancel-button" type="button" data-action="cancel">Cancel</button>
+                    <button class="btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const statusOrder = ['ToDo', 'InProgress', 'Done'];
+        const statusLabels = {
+            ToDo: 'To Do',
+            InProgress: 'In Progress',
+            Done: 'Done'
+        };
+        const priorityOrder = {
+            High: 0,
+            Medium: 1,
+            Low: 2
+        };
+
+        const board = document.getElementById('board');
+        const boardShell = document.querySelector('.board-shell');
+        const errorOverlay = document.getElementById('error-overlay');
+        const newTaskButton = document.getElementById('new-task-button');
+        const taskModal = document.getElementById('task-modal');
+        const modalCloseButton = document.getElementById('modal-close');
+        const cancelButton = document.getElementById('cancel-button');
+        const modalTitle = document.getElementById('modal-title');
+        const taskForm = document.getElementById('task-form');
+        const taskIdInput = document.getElementById('task-id');
+        const titleInput = document.getElementById('task-title');
+        const descriptionInput = document.getElementById('task-description');
+        const statusInput = document.getElementById('task-status');
+        const priorityInput = document.getElementById('task-priority');
+        const assigneeInput = document.getElementById('task-assignee');
+        const formAlert = document.getElementById('form-alert');
+        let tasks = [];
+        let boardNotice = '';
+        let boardNoticeTimer = null;
+        let draggedTaskId = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sortTasks(taskList) {
+            return [...taskList].sort((a, b) => {
+                const priorityDelta = priorityOrder[a.priority] - priorityOrder[b.priority];
+                if (priorityDelta !== 0) {
+                    return priorityDelta;
+                }
+
+                return Number(a.id) - Number(b.id);
+            });
+        }
+
+        function hideErrorOverlay() {
+            errorOverlay.classList.remove('is-visible');
+            errorOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function showBoardNotice(message) {
+            boardNotice = message;
+            window.clearTimeout(boardNoticeTimer);
+            boardNoticeTimer = window.setTimeout(() => {
+                boardNotice = '';
+                renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
+            }, 5000);
+            renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
+        }
+
+        function renderLoadingState() {
+            hideErrorOverlay();
+            board.innerHTML = `
+                <div class="state state-loading" role="status" aria-live="polite">
+                    <h2 class="state-title">Loading tasks…</h2>
+                    <p class="state-message">The board is fetching your tasks.</p>
+                </div>
+            `;
+        }
+
+        function renderErrorState() {
+            errorOverlay.innerHTML = `
+                <div class="state state-error" role="alert">
+                    <h2 class="state-title">Unable to load tasks</h2>
+                    <p class="state-message">Please try again in a moment.</p>
+                    <div class="state-actions">
+                        <button class="btn-retry" type="button" data-action="retry">Retry</button>
+                    </div>
+                </div>
+            `;
+            errorOverlay.classList.add('is-visible');
+            errorOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function renderBoard(taskList, state = 'ready', notice = boardNotice) {
+            if (state === 'loading') {
+                renderLoadingState();
+                return;
+            }
+
+            if (state === 'error') {
+                const noticeMarkup = notice
+                    ? `<div class="board-notice" role="alert">${escapeHtml(notice)}</div>`
+                    : '';
+                const emptyMarkup = taskList.length === 0
+                    ? '<p class="board-empty">No tasks yet.</p>'
+                    : '';
+
+                const columnsMarkup = statusOrder.map((status) => {
+                    const tasksForStatus = sortTasks(taskList.filter((task) => task.status === status));
+                    const columnBodyMarkup = tasksForStatus.length > 0
+                        ? tasksForStatus.map((task) => `
+                            <article class="card" draggable="true" data-task-id="${escapeHtml(task.id)}">
+                                <div class="card-meta">
+                                    <strong>${escapeHtml(task.title)}</strong>
+                                    <span class="priority priority-${escapeHtml(task.priority.toLowerCase())}">${escapeHtml(task.priority)}</span>
+                                </div>
+                                ${task.description ? `<p class="card-description">${escapeHtml(task.description)}</p>` : ''}
+                                <div class="card-meta">
+                                    <span>Assignee</span>
+                                    <span>${escapeHtml(task.assignee || 'Unassigned')}</span>
+                                </div>
+                                <button class="btn-edit" type="button">Edit</button>
+                            </article>
+                        `).join('')
+                        : '<p class="column-placeholder">No tasks in this column yet.</p>';
+
+                    return `
+                        <section class="column" data-status="${escapeHtml(status)}">
+                            <div class="column-header">
+                                <h2>${escapeHtml(statusLabels[status])}</h2>
+                                <span class="count">${tasksForStatus.length}</span>
+                            </div>
+                            <div class="column-body">
+                                ${columnBodyMarkup}
+                            </div>
+                        </section>
+                    `;
+                }).join('');
+
+                board.innerHTML = `${noticeMarkup}${emptyMarkup}${columnsMarkup}`;
+                renderErrorState();
+                return;
+            }
+
+            hideErrorOverlay();
+
+            const noticeMarkup = notice
+                ? `<div class="board-notice" role="alert">${escapeHtml(notice)}</div>`
+                : '';
+            const emptyMarkup = taskList.length === 0
+                ? '<p class="board-empty">No tasks yet.</p>'
+                : '';
+
+            const columnsMarkup = statusOrder.map((status) => {
+                const tasksForStatus = sortTasks(taskList.filter((task) => task.status === status));
+                const columnBodyMarkup = tasksForStatus.length > 0
+                    ? tasksForStatus.map((task) => `
+                        <article class="card" draggable="true" data-task-id="${escapeHtml(task.id)}">
+                            <div class="card-meta">
+                                <strong>${escapeHtml(task.title)}</strong>
+                                <span class="priority priority-${escapeHtml(task.priority.toLowerCase())}">${escapeHtml(task.priority)}</span>
+                            </div>
+                            ${task.description ? `<p class="card-description">${escapeHtml(task.description)}</p>` : ''}
+                            <div class="card-meta">
+                                <span>Assignee</span>
+                                <span>${escapeHtml(task.assignee || 'Unassigned')}</span>
+                            </div>
+                            <button class="btn-edit" type="button">Edit</button>
+                        </article>
+                    `).join('')
+                    : '<p class="column-placeholder">No tasks in this column yet.</p>';
+
+                return `
+                    <section class="column" data-status="${escapeHtml(status)}">
+                        <div class="column-header">
+                            <h2>${escapeHtml(statusLabels[status])}</h2>
+                            <span class="count">${tasksForStatus.length}</span>
+                        </div>
+                        <div class="column-body">
+                            ${columnBodyMarkup}
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            board.innerHTML = `${noticeMarkup}${emptyMarkup}${columnsMarkup}`;
+        }
+
+        function resetTaskForm() {
+            taskForm.reset();
+            taskIdInput.value = '';
+            setFormError('');
+        }
+
+        function setFormError(message) {
+            formAlert.textContent = message;
+            formAlert.hidden = !message;
+        }
+
+        function openTaskModal(mode = 'create', task = null) {
+            resetTaskForm();
+            modalTitle.textContent = mode === 'edit' ? 'Edit Task' : 'New Task';
+            taskForm.dataset.mode = mode;
+
+            if (mode === 'edit' && task) {
+                taskIdInput.value = task.id;
+                titleInput.value = task.title || '';
+                descriptionInput.value = task.description || '';
+                statusInput.value = task.status || 'ToDo';
+                priorityInput.value = task.priority || 'Medium';
+                assigneeInput.value = task.assignee || '';
+            } else {
+                statusInput.value = 'ToDo';
+                priorityInput.value = 'Medium';
+            }
+
+            taskModal.classList.add('is-open');
+            taskModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            titleInput.focus();
+        }
+
+        function closeTaskModal() {
+            taskModal.classList.remove('is-open');
+            taskModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('modal-open');
+            resetTaskForm();
+        }
+
+        async function fetchTasks() {
+            boardNotice = '';
+            renderBoard([], 'loading');
+
+            try {
+                const response = await fetch('http://localhost:8000/tasks');
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+
+                tasks = await response.json();
+                renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
+            } catch (error) {
+                console.error('Failed to load tasks', error);
+                renderBoard([], 'error');
+            }
+        }
+
+        function clearDragState() {
+            draggedTaskId = null;
+            board.querySelectorAll('.column').forEach((column) => column.classList.remove('drag-over'));
+            board.querySelectorAll('.card.dragging').forEach((card) => card.classList.remove('dragging'));
+        }
+
+        function getErrorMessage(response) {
+            return response.json().then((payload) => {
+                if (payload && payload.detail) {
+                    if (Array.isArray(payload.detail)) {
+                        return payload.detail.map((item) => item.msg || item).join(' ');
+                    }
+
+                    return String(payload.detail);
+                }
+
+                return `Request failed with status ${response.status}`;
+            }).catch(() => `Request failed with status ${response.status}`);
+        }
+
+        async function submitTaskForm(event) {
+            event.preventDefault();
+
+            const title = titleInput.value.trim();
+            if (!title) {
+                setFormError('Title is required');
+                titleInput.focus();
+                return;
+            }
+
+            const payload = {
+                title,
+                description: descriptionInput.value,
+                status: statusInput.value,
+                priority: priorityInput.value,
+                assignee: assigneeInput.value.trim() ? assigneeInput.value.trim() : null
+            };
+
+            const isEdit = Boolean(taskIdInput.value);
+            const endpoint = isEdit
+                ? `http://localhost:8000/tasks/${taskIdInput.value}`
+                : 'http://localhost:8000/tasks';
+            const method = isEdit ? 'PATCH' : 'POST';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const message = await getErrorMessage(response);
+                    setFormError(message);
+                    return;
+                }
+
+                closeTaskModal();
+                await fetchTasks();
+            } catch (error) {
+                setFormError(error.message || 'Unable to save task. Please try again.');
+            }
+        }
+
+        async function handleDrop(event) {
+            const column = event.target.closest('.column');
+            if (!column || !draggedTaskId) {
+                clearDragState();
+                return;
+            }
+
+            event.preventDefault();
+
+            const targetStatus = column.dataset.status;
+            const previousTask = tasks.find((task) => task.id === draggedTaskId);
+            if (!previousTask || previousTask.status === targetStatus) {
+                clearDragState();
+                return;
+            }
+
+            const optimisticTask = { ...previousTask, status: targetStatus };
+            tasks = tasks.map((task) => (task.id === draggedTaskId ? optimisticTask : task));
+            boardNotice = '';
+            renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
+
+            try {
+                const response = await fetch(`http://localhost:8000/tasks/${draggedTaskId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: targetStatus })
+                });
+
+                if (!response.ok) {
+                    const message = await getErrorMessage(response);
+                    throw new Error(message);
+                }
+
+                const updatedTask = await response.json();
+                tasks = tasks.map((task) => (task.id === draggedTaskId ? updatedTask : task));
+                renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
+            } catch (error) {
+                tasks = tasks.map((task) => (task.id === draggedTaskId ? previousTask : task));
+                showBoardNotice(error.message || 'Unable to update task. Please check your connection and try again.');
+            } finally {
+                clearDragState();
+            }
+        }
+
+        boardShell.addEventListener('click', (event) => {
+            if (event.target.matches('[data-action="retry"]')) {
+                fetchTasks();
+                return;
+            }
+
+            const editButton = event.target.closest('.btn-edit');
+            if (!editButton) {
+                return;
+            }
+
+            const card = editButton.closest('.card');
+            const taskId = card?.dataset.taskId;
+            const task = tasks.find((item) => String(item.id) === String(taskId));
+            if (task) {
+                openTaskModal('edit', task);
+            }
+        });
+
+        newTaskButton.addEventListener('click', () => openTaskModal('create'));
+        modalCloseButton.addEventListener('click', closeTaskModal);
+        cancelButton.addEventListener('click', closeTaskModal);
+        taskForm.addEventListener('submit', submitTaskForm);
+        taskForm.addEventListener('input', () => {
+            if (!formAlert.hidden) {
+                setFormError('');
+            }
+        });
+        taskModal.addEventListener('click', (event) => {
+            if (event.target === taskModal) {
+                closeTaskModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && taskModal.classList.contains('is-open')) {
+                closeTaskModal();
+            }
+        });
+
+        board.addEventListener('dragstart', (event) => {
+            const card = event.target.closest('.card');
+            if (!card) {
+                return;
+            }
+
+            draggedTaskId = card.dataset.taskId;
+            card.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedTaskId);
+        });
+
+        board.addEventListener('dragend', (event) => {
+            if (event.target.closest('.card')) {
+                clearDragState();
+            }
+        });
+
+        board.addEventListener('dragover', (event) => {
+            const column = event.target.closest('.column');
+            const currentTask = tasks.find((task) => task.id === draggedTaskId);
+
+            if (!column || !currentTask || currentTask.status === column.dataset.status) {
+                return;
+            }
+
+            event.preventDefault();
+            column.classList.add('drag-over');
+            event.dataTransfer.dropEffect = 'move';
+        });
+
+        board.addEventListener('dragleave', (event) => {
+            const column = event.target.closest('.column');
+            if (!column) {
+                return;
+            }
+
+            if (!event.relatedTarget || !column.contains(event.relatedTarget)) {
+                column.classList.remove('drag-over');
+            }
+        });
+
+        board.addEventListener('drop', handleDrop);
+
+        fetchTasks();
+    </script>
+</body>
+</html>
+
