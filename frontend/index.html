@@ -205,10 +205,6 @@
         }
 
         .board-notice {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            max-width: min(320px, calc(100% - 2rem));
             padding: 0.85rem 1rem;
             border-radius: 10px;
             border: 1px solid #fecaca;
@@ -608,7 +604,40 @@
         .state-loading { color: var(--accent) }
         .state-error { border-color: #fee2e2; background: #fff5f5; color: var(--high) }
 
-        .board-notice { position:absolute; top:1rem; right:1rem; max-width:min(360px,calc(100%-2rem)); padding:0.85rem 1rem; border-radius:10px; border:1px solid #fee2e2; background:#fff5f5; color:var(--high); box-shadow: 0 18px 36px rgba(15,23,42,0.08); }
+        /* Lives outside .board so it can never affect the grid's track sizing. */
+        .board-notice-slot:empty { display: none; }
+        .board-notice-slot { margin-bottom: 1rem; }
+
+        /* Full-width banner above the columns: wide and short, never over the cards. */
+        .board-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border-radius: 10px;
+            border: 1px solid #fee2e2;
+            background: #fff5f5;
+            color: var(--high);
+            font-size: 0.88rem;
+            line-height: 1.35;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        }
+
+        .board-notice::before {
+            content: "!";
+            flex: none;
+            display: grid;
+            place-items: center;
+            width: 18px;
+            height: 18px;
+            margin-top: 0.05rem;
+            border-radius: 50%;
+            background: var(--high);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
 
         .modal-backdrop { position:fixed; inset:0; background: rgba(2,6,23,0.5); display:none; align-items:center; justify-content:center; padding:1rem; z-index:30 }
         .modal-backdrop.is-open { display:flex }
@@ -656,6 +685,7 @@
 
     <main>
         <div class="board-shell">
+            <div id="board-notice" class="board-notice-slot" role="alert" aria-live="assertive"></div>
             <section id="board" class="board" aria-label="Task board"></section>
             <div id="error-overlay" class="error-overlay" aria-live="assertive" aria-hidden="true"></div>
         </div>
@@ -728,6 +758,7 @@
         const board = document.getElementById('board');
         const boardShell = document.querySelector('.board-shell');
         const errorOverlay = document.getElementById('error-overlay');
+        const noticeSlot = document.getElementById('board-notice');
         const newTaskButton = document.getElementById('new-task-button');
         const taskModal = document.getElementById('task-modal');
         const modalCloseButton = document.getElementById('modal-close');
@@ -795,6 +826,12 @@
             renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
         }
 
+        function renderNotice(notice) {
+            noticeSlot.innerHTML = notice
+                ? `<div class="board-notice">${escapeHtml(notice)}</div>`
+                : '';
+        }
+
         function renderEmptyState() {
             return `
                 <div class="board-empty">
@@ -808,6 +845,7 @@
 
         function renderLoadingState() {
             hideErrorOverlay();
+            renderNotice('');
             board.innerHTML = `
                 <div class="state state-loading" role="status" aria-live="polite">
                     <h2 class="state-title">Loading tasks…</h2>
@@ -837,9 +875,7 @@
             }
 
             if (state === 'error') {
-                const noticeMarkup = notice
-                    ? `<div class="board-notice" role="alert">${escapeHtml(notice)}</div>`
-                    : '';
+                renderNotice(notice);
                 // No empty state here: the tasks failed to load, they aren't absent.
                 const emptyMarkup = '';
 
@@ -881,16 +917,14 @@
                     `;
                 }).join('');
 
-                board.innerHTML = `${noticeMarkup}${emptyMarkup}${columnsMarkup}`;
+                board.innerHTML = `${emptyMarkup}${columnsMarkup}`;
                 renderErrorState();
                 return;
             }
 
             hideErrorOverlay();
+            renderNotice(notice);
 
-            const noticeMarkup = notice
-                ? `<div class="board-notice" role="alert">${escapeHtml(notice)}</div>`
-                : '';
             const emptyMarkup = taskList.length === 0 ? renderEmptyState() : '';
 
             const columnsMarkup = statusOrder.map((status) => {
@@ -928,7 +962,7 @@
                 `;
             }).join('');
 
-            board.innerHTML = `${noticeMarkup}${emptyMarkup}${columnsMarkup}`;
+            board.innerHTML = `${emptyMarkup}${columnsMarkup}`;
         }
 
         function resetTaskForm() {
