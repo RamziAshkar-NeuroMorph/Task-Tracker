@@ -59,6 +59,65 @@ class TaskUpdate(BaseModel):
         return stripped
 
 
+class TaskFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    search: Optional[str] = None
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+    assignee: Optional[str] = None
+
+    @field_validator("search", "assignee")
+    @classmethod
+    def blank_means_absent(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        stripped = value.strip()
+        return stripped or None
+
+
+class CommentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Comment text must not be blank.")
+        if len(stripped) > 1000:
+            raise ValueError("Comment text must be 1000 characters or fewer.")
+        return stripped
+
+
+class CommentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Comment text must not be blank.")
+        if len(stripped) > 1000:
+            raise ValueError("Comment text must be 1000 characters or fewer.")
+        return stripped
+
+
+class CommentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    task_id: str
+    text: str
+    created_at: datetime
+    edited_at: Optional[datetime]
+
+
 class TaskResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

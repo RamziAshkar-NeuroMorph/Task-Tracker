@@ -63,6 +63,104 @@ def test_list_tasks_filter_by_priority_returns_only_matches(client):
     assert tasks[0]["priority"] == "High"
 
 
+def test_list_tasks_search_matches_title_case_insensitively(client):
+    client.post("/tasks", json={"title": "Deploy API"})
+    client.post("/tasks", json={"title": "Write docs"})
+    response = client.get("/tasks", params={"search": "deploy"})
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Deploy API"
+
+
+def test_list_tasks_search_matches_partial_word_and_description(client):
+    client.post("/tasks", json={"title": "Ship it", "description": "Deploy the API"})
+    response = client.get("/tasks", params={"search": "depl"})
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+def test_list_tasks_blank_search_returns_all_tasks(client):
+    client.post("/tasks", json={"title": "First"})
+    client.post("/tasks", json={"title": "Second"})
+    response = client.get("/tasks", params={"search": "   "})
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_list_tasks_search_no_match_returns_200_and_empty_list(client):
+    client.post("/tasks", json={"title": "Deploy API"})
+    response = client.get("/tasks", params={"search": "nonexistent"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_tasks_filter_by_assignee_returns_only_matches(client):
+    client.post("/tasks", json={"title": "Alice task", "assignee": "alice"})
+    client.post("/tasks", json={"title": "Bob task", "assignee": "bob"})
+    response = client.get("/tasks", params={"assignee": "alice"})
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 1
+    assert tasks[0]["assignee"] == "alice"
+
+
+def test_list_tasks_combined_filters_apply_as_and(client):
+    client.post(
+        "/tasks",
+        json={"title": "Deploy API", "priority": "High", "assignee": "alice"},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Deploy frontend", "priority": "Low", "assignee": "alice"},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Deploy docs", "priority": "High", "assignee": "bob"},
+    )
+
+    response = client.get(
+        "/tasks",
+        params={
+            "search": "deploy",
+            "status": "ToDo",
+            "priority": "High",
+            "assignee": "alice",
+        },
+    )
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Deploy API"
+
+
+def test_list_tasks_no_filters_returns_all_tasks(client):
+    client.post("/tasks", json={"title": "First"})
+    client.post("/tasks", json={"title": "Second"})
+    response = client.get("/tasks")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_list_tasks_unknown_query_parameter_returns_422(client):
+    client.post("/tasks", json={"title": "Deploy API"})
+    response = client.get("/tasks", params={"statuss": "Done"})
+    assert response.status_code == 422
+
+
+def test_list_tasks_empty_status_value_returns_422(client):
+    response = client.get("/tasks", params={"status": ""})
+    assert response.status_code == 422
+
+
+def test_list_tasks_multiple_invalid_parameters_are_all_reported(client):
+    response = client.get("/tasks", params={"status": "Nope", "priority": "Urgent"})
+    assert response.status_code == 422
+    reported = {error["loc"][-1] for error in response.json()["detail"]}
+    assert reported == {"status", "priority"}
+
+
 def test_get_task_by_id_returns_task(client, created_task):
     response = client.get(f"/tasks/{created_task['id']}")
     assert response.status_code == 200

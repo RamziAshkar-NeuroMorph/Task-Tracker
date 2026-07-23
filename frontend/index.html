@@ -245,6 +245,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 0.35rem;
             margin: 0;
             padding: 2.25rem 1.5rem;
@@ -525,9 +526,24 @@
             -moz-osx-font-smoothing:grayscale;
             line-height: 1.4;
             transition: background .2s ease;
+            /* The page itself never scrolls; each column body scrolls instead. */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        .app-header { flex: none; width: 100%; }
+
+        main {
+            flex: 1 1 auto;
+            min-height: 0; /* allows children to shrink below content height */
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
         .app-header {
             background: linear-gradient(90deg, rgba(99,102,241,0.95), rgba(59,130,246,0.95));
@@ -558,16 +574,50 @@
 
         .btn-create:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(59,130,246,0.18); }
 
-        .board-shell { position: relative; min-height: 320px; margin-top: 1.25rem; }
+        .board-shell {
+            position: relative;
+            margin-top: 1.25rem;
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
 
         .board {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 1.25rem;
-            align-items: start;
+            align-items: stretch; /* columns fill the board height */
+            flex: 1 1 auto;
+            min-height: 0;
         }
 
-        .column { background: linear-gradient(180deg,var(--surface),var(--muted-surface)); border-radius: 12px; padding: 1rem; border: 1px solid var(--border); box-shadow: 0 6px 22px rgba(15,23,42,0.04); }
+        .column {
+            background: linear-gradient(180deg,var(--surface),var(--muted-surface));
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 22px rgba(15,23,42,0.04);
+            /* Header stays pinned; only the body below it scrolls. */
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .column-header { flex: none; }
+
+        .column-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+            scrollbar-width: thin;
+        }
+
+        .column-body::-webkit-scrollbar { width: 8px; }
+        .column-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+        .column-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
         /* entrance animations */
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -643,12 +693,13 @@
         .modal-backdrop.is-open { display:flex }
         body.modal-open { overflow:hidden }
 
-        .modal { width:min(620px,100%); background: white; border-radius:14px; overflow:hidden; box-shadow: 0 30px 70px rgba(2,6,23,0.2) }
-        .modal-header { padding:1.1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border) }
+        /* Header stays pinned; the form body scrolls when the dialog is taller than the screen. */
+        .modal { width:min(620px,100%); max-height:calc(100vh - 2rem); display:flex; flex-direction:column; background: white; border-radius:14px; overflow:hidden; box-shadow: 0 30px 70px rgba(2,6,23,0.2) }
+        .modal-header { flex:none; padding:1.1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border) }
         .modal-header h2 { margin:0; font-size:1.15rem }
         .modal-close { border:none; background:transparent; color:var(--muted); font-size:1.35rem; cursor:pointer }
 
-        .task-form { padding:1.1rem 1.25rem 1.25rem }
+        .task-form { padding:1.1rem 1.25rem 1.25rem; flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:thin }
         .field { display:flex; flex-direction:column; gap:0.35rem; margin-bottom:0.85rem; font-weight:600; color:var(--text) }
         .field input, .field textarea, .field select { border:1px solid var(--border); border-radius:10px; padding:0.75rem 0.9rem; font-size:0.95rem; font-family:inherit }
         .field input:focus, .field textarea:focus, .field select:focus { outline:none; box-shadow:0 6px 20px rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.18) }
@@ -660,7 +711,93 @@
         .btn-secondary { background:#f1f5f9; color:var(--text) }
         .btn-primary { background: linear-gradient(90deg,var(--accent),#3b82f6); color:white }
 
-        @media (max-width:900px) { .board { grid-template-columns: 1fr } .app-header { border-radius:10px; margin:1rem } main { padding:1rem } }
+        /* Comments (inside the task dialog) */
+        .comments-section { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--border) }
+        .comments-section h3 { margin: 0 0 0.6rem; font-size: 1rem }
+
+        .comments-list { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 0.75rem; max-height: 220px; overflow-y: auto; scrollbar-width: thin }
+        .comments-list[hidden] { display: none }
+
+        .comment { background: var(--muted-surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem }
+        .comment-text { margin: 0 0 0.4rem; font-weight: 400; font-size: 0.92rem; white-space: pre-wrap; word-break: break-word }
+        .comment-meta { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; font-size: 0.78rem; color: var(--muted); font-weight: 400 }
+
+        .comment-actions { display: flex; gap: 0.2rem }
+        .comment-actions button { border: none; background: transparent; cursor: pointer; font-weight: 600; font-size: 0.78rem; padding: 0.15rem 0.4rem; border-radius: 6px }
+        .btn-comment-edit { color: var(--accent) }
+        .btn-comment-delete { color: var(--high) }
+        .btn-comment-edit:hover, .btn-comment-delete:hover { background: #f1f5f9 }
+
+        .comment-edit-input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.6rem; font-family: inherit; font-size: 0.9rem; min-height: 56px; resize: vertical; margin-bottom: 0.4rem }
+
+        .comments-empty { margin: 0; padding: 0.7rem; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); text-align: center; font-size: 0.88rem; font-weight: 400 }
+
+        .comment-form { display: flex; flex-direction: column; gap: 0.4rem }
+        /* Same look as the other dialog inputs (.field only styles its own children). */
+        .comment-form textarea { min-height: 60px; resize: vertical; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.9rem; font-size: 0.95rem; font-family: inherit; color: var(--text) }
+        .comment-form textarea:focus { outline: none; box-shadow: 0 6px 20px rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.18) }
+        .comment-edit-input:focus { outline: none; box-shadow: 0 6px 20px rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.18) }
+        .comment-form-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem }
+        .comment-counter { font-size: 0.78rem; color: var(--muted); font-weight: 400 }
+        .comment-counter.over { color: var(--high) }
+        .comment-hint { margin: 0; font-size: 0.8rem; color: var(--muted); font-weight: 400 }
+
+        .btn-add-comment { border: none; background: var(--accent-soft); color: var(--accent); padding: 0.5rem 0.8rem; border-radius: 8px; cursor: pointer; font-weight: 700 }
+        .btn-add-comment:hover { background: #e0e7ff }
+
+        .comment-alert { margin-bottom: 0.6rem; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid #fee2e2; background: #fff5f5; color: var(--high); font-size: 0.85rem; font-weight: 400 }
+
+        /* Filter bar */
+        .filters {
+            display: grid;
+            grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(140px, 1fr)) minmax(160px, 1fr) auto;
+            gap: 0.75rem;
+            align-items: end;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: linear-gradient(180deg, var(--surface), var(--muted-surface));
+            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
+        }
+
+        .filters .field {
+            margin-bottom: 0;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .filters input,
+        .filters select {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.92rem;
+            color: var(--text);
+            background: white;
+        }
+
+        .btn-clear-filters {
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--muted);
+            padding: 0.65rem 0.9rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-clear-filters:hover { background: #f1f5f9; color: var(--text) }
+        .btn-clear-filters:disabled { opacity: 0.5; cursor: default }
+
+        @media (max-width:900px) {
+            /* Stacked columns don't fit a locked viewport: back to page scrolling. */
+            body { display: block; overflow: auto }
+            main { display: block; padding:1rem }
+            .board-shell { display: block }
+            .board { grid-template-columns: 1fr }
+            .column { overflow: visible }
+            .column-body { overflow-y: visible; max-height: none }
+            .app-header { border-radius:10px; margin:1rem; width:auto }
+            .filters { grid-template-columns: 1fr }
+        }
     </style>
 </head>
 <body>
@@ -684,6 +821,40 @@
     </header>
 
     <main>
+        <form id="filters" class="filters" aria-label="Search and filter tasks" autocomplete="off">
+            <label class="field" for="filter-search">
+                Search
+                <input id="filter-search" name="search" type="search" placeholder="Title or description…">
+            </label>
+
+            <label class="field" for="filter-status">
+                Status
+                <select id="filter-status" name="status">
+                    <option value="">All statuses</option>
+                    <option value="ToDo">To Do</option>
+                    <option value="InProgress">In Progress</option>
+                    <option value="Done">Done</option>
+                </select>
+            </label>
+
+            <label class="field" for="filter-priority">
+                Priority
+                <select id="filter-priority" name="priority">
+                    <option value="">All priorities</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </label>
+
+            <label class="field" for="filter-assignee">
+                Assignee
+                <input id="filter-assignee" name="assignee" type="text" placeholder="Any assignee">
+            </label>
+
+            <button class="btn-clear-filters" id="clear-filters" type="button" disabled>Clear</button>
+        </form>
+
         <div class="board-shell">
             <div id="board-notice" class="board-notice-slot" role="alert" aria-live="assertive"></div>
             <section id="board" class="board" aria-label="Task board"></section>
@@ -734,6 +905,20 @@
                     <input id="task-assignee" name="assignee" type="text">
                 </label>
 
+                <section class="comments-section" aria-label="Comments">
+                    <h3>Comments</h3>
+                    <div id="comments-list" class="comments-list"></div>
+                    <div id="comment-alert" class="comment-alert" role="alert" hidden></div>
+                    <div class="comment-form">
+                        <textarea id="comment-text" placeholder="Write a comment…" maxlength="1000"></textarea>
+                        <div class="comment-form-footer">
+                            <span id="comment-counter" class="comment-counter">0 / 1000</span>
+                            <p id="comment-hint" class="comment-hint" hidden>Your comment will be added when the task is saved.</p>
+                            <button class="btn-add-comment" id="add-comment-button" type="button">Add Comment</button>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="modal-actions">
                     <button class="btn-secondary" id="cancel-button" type="button" data-action="cancel">Cancel</button>
                     <button class="btn-primary" type="submit">Save</button>
@@ -772,10 +957,26 @@
         const priorityInput = document.getElementById('task-priority');
         const assigneeInput = document.getElementById('task-assignee');
         const formAlert = document.getElementById('form-alert');
+        const filtersForm = document.getElementById('filters');
+        const searchFilter = document.getElementById('filter-search');
+        const statusFilter = document.getElementById('filter-status');
+        const priorityFilter = document.getElementById('filter-priority');
+        const assigneeFilter = document.getElementById('filter-assignee');
+        const clearFiltersButton = document.getElementById('clear-filters');
+        const commentsList = document.getElementById('comments-list');
+        const commentAlert = document.getElementById('comment-alert');
+        const commentInput = document.getElementById('comment-text');
+        const commentCounter = document.getElementById('comment-counter');
+        const commentHint = document.getElementById('comment-hint');
+        const addCommentButton = document.getElementById('add-comment-button');
+        const COMMENT_MAX_LENGTH = 1000;
         let tasks = [];
+        let filterDebounceTimer = null;
         let boardNotice = '';
         let boardNoticeTimer = null;
         let draggedTaskId = null;
+        let currentComments = [];
+        let editingCommentId = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -833,6 +1034,17 @@
         }
 
         function renderEmptyState() {
+            if (hasActiveFilters()) {
+                return `
+                    <div class="board-empty">
+                        <span class="empty-icon"><svg aria-hidden="true"><use href="#icon-empty"></use></svg></span>
+                        <h2>No matching tasks</h2>
+                        <p>No tasks match the current search and filters.</p>
+                        <button class="btn-create" type="button" data-action="clear-filters">Clear filters</button>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="board-empty">
                     <span class="empty-icon"><svg aria-hidden="true"><use href="#icon-empty"></use></svg></span>
@@ -969,6 +1181,10 @@
             taskForm.reset();
             taskIdInput.value = '';
             setFormError('');
+            currentComments = [];
+            editingCommentId = null;
+            setCommentError('');
+            updateCommentCounter();
         }
 
         function setFormError(message) {
@@ -988,9 +1204,18 @@
                 statusInput.value = task.status || 'ToDo';
                 priorityInput.value = task.priority || 'Medium';
                 assigneeInput.value = task.assignee || '';
+                /* Existing task: show the list and post comments immediately. */
+                commentsList.hidden = false;
+                addCommentButton.hidden = false;
+                commentHint.hidden = true;
+                fetchComments(task.id);
             } else {
                 statusInput.value = 'ToDo';
                 priorityInput.value = 'Medium';
+                /* New task: no comments exist yet; the typed comment is posted after save. */
+                commentsList.hidden = true;
+                addCommentButton.hidden = true;
+                commentHint.hidden = false;
             }
 
             taskModal.classList.add('is-open');
@@ -1006,12 +1231,250 @@
             resetTaskForm();
         }
 
+        /* --- Comments --- */
+
+        function commentsUrl(taskId, commentId = '') {
+            return `http://localhost:8000/tasks/${taskId}/comments${commentId ? `/${commentId}` : ''}`;
+        }
+
+        function setCommentError(message) {
+            commentAlert.textContent = message;
+            commentAlert.hidden = !message;
+        }
+
+        /* Mirrors the backend rules: non-blank after trimming, max 1000 characters. */
+        function validateCommentText(raw) {
+            const text = String(raw).trim();
+            if (!text) {
+                return { error: 'Comment must not be blank.' };
+            }
+            if (text.length > COMMENT_MAX_LENGTH) {
+                return { error: `Comment must be ${COMMENT_MAX_LENGTH} characters or fewer.` };
+            }
+            return { text };
+        }
+
+        function updateCommentCounter() {
+            const length = commentInput.value.trim().length;
+            commentCounter.textContent = `${length} / ${COMMENT_MAX_LENGTH}`;
+            commentCounter.classList.toggle('over', length > COMMENT_MAX_LENGTH);
+        }
+
+        function renderComments() {
+            if (currentComments.length === 0) {
+                commentsList.innerHTML = '<p class="comments-empty">No comments yet. Start the discussion below.</p>';
+                return;
+            }
+
+            commentsList.innerHTML = currentComments.map((comment) => {
+                if (comment.id === editingCommentId) {
+                    return `
+                        <div class="comment" data-comment-id="${escapeHtml(comment.id)}">
+                            <textarea class="comment-edit-input" maxlength="1000">${escapeHtml(comment.text)}</textarea>
+                            <div class="comment-meta">
+                                <span></span>
+                                <span class="comment-actions">
+                                    <button class="btn-comment-edit" type="button" data-action="save-comment">Save</button>
+                                    <button class="btn-comment-delete" type="button" data-action="cancel-comment-edit">Cancel</button>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                /* An edited comment shows its last edit time instead of the creation time. */
+                const dateLabel = comment.edited_at
+                    ? `Edited ${formatDate(comment.edited_at)}`
+                    : formatDate(comment.created_at);
+
+                return `
+                    <div class="comment" data-comment-id="${escapeHtml(comment.id)}">
+                        <p class="comment-text">${escapeHtml(comment.text)}</p>
+                        <div class="comment-meta">
+                            <span>${escapeHtml(dateLabel)}</span>
+                            <span class="comment-actions">
+                                <button class="btn-comment-edit" type="button" data-action="edit-comment">Edit</button>
+                                <button class="btn-comment-delete" type="button" data-action="delete-comment">Delete</button>
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchComments(taskId) {
+            commentsList.innerHTML = '<p class="comments-empty">Loading comments…</p>';
+            try {
+                const response = await fetch(commentsUrl(taskId));
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+
+                currentComments = await response.json();
+                renderComments();
+            } catch (error) {
+                console.error('Failed to load comments', error);
+                commentsList.innerHTML = '<p class="comments-empty">Unable to load comments.</p>';
+            }
+        }
+
+        async function addComment() {
+            const { text, error } = validateCommentText(commentInput.value);
+            if (error) {
+                setCommentError(error);
+                commentInput.focus();
+                return;
+            }
+
+            try {
+                const response = await fetch(commentsUrl(taskIdInput.value), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!response.ok) {
+                    setCommentError(await getErrorMessage(response));
+                    return;
+                }
+
+                commentInput.value = '';
+                updateCommentCounter();
+                setCommentError('');
+                await fetchComments(taskIdInput.value);
+            } catch (error) {
+                setCommentError(error.message || 'Unable to add comment. Please try again.');
+            }
+        }
+
+        async function saveCommentEdit(commentId, raw) {
+            const { text, error } = validateCommentText(raw);
+            if (error) {
+                setCommentError(error);
+                return;
+            }
+
+            try {
+                const response = await fetch(commentsUrl(taskIdInput.value, commentId), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!response.ok) {
+                    setCommentError(await getErrorMessage(response));
+                    return;
+                }
+
+                editingCommentId = null;
+                setCommentError('');
+                await fetchComments(taskIdInput.value);
+            } catch (error) {
+                setCommentError(error.message || 'Unable to save comment. Please try again.');
+            }
+        }
+
+        async function deleteComment(commentId) {
+            try {
+                const response = await fetch(commentsUrl(taskIdInput.value, commentId), { method: 'DELETE' });
+                if (!response.ok) {
+                    setCommentError(await getErrorMessage(response));
+                    return;
+                }
+
+                setCommentError('');
+                await fetchComments(taskIdInput.value);
+            } catch (error) {
+                setCommentError(error.message || 'Unable to delete comment. Please try again.');
+            }
+        }
+
+        commentsList.addEventListener('click', (event) => {
+            const item = event.target.closest('[data-comment-id]');
+            if (!item) {
+                return;
+            }
+
+            const commentId = item.dataset.commentId;
+
+            if (event.target.matches('[data-action="edit-comment"]')) {
+                editingCommentId = commentId;
+                setCommentError('');
+                renderComments();
+                commentsList.querySelector('.comment-edit-input')?.focus();
+                return;
+            }
+
+            if (event.target.matches('[data-action="cancel-comment-edit"]')) {
+                editingCommentId = null;
+                setCommentError('');
+                renderComments();
+                return;
+            }
+
+            if (event.target.matches('[data-action="save-comment"]')) {
+                const editInput = item.querySelector('.comment-edit-input');
+                saveCommentEdit(commentId, editInput ? editInput.value : '');
+                return;
+            }
+
+            if (event.target.matches('[data-action="delete-comment"]')) {
+                deleteComment(commentId);
+            }
+        });
+
+        addCommentButton.addEventListener('click', addComment);
+        commentInput.addEventListener('input', () => {
+            updateCommentCounter();
+            if (!commentAlert.hidden) {
+                setCommentError('');
+            }
+        });
+
+        /* Reads the filter bar. Blank inputs are omitted so the API returns everything. */
+        function readFilters() {
+            return {
+                search: searchFilter.value.trim(),
+                status: statusFilter.value,
+                priority: priorityFilter.value,
+                assignee: assigneeFilter.value.trim()
+            };
+        }
+
+        function hasActiveFilters() {
+            return Object.values(readFilters()).some((value) => value !== '');
+        }
+
+        function buildTasksUrl() {
+            const url = new URL('http://localhost:8000/tasks');
+            Object.entries(readFilters()).forEach(([key, value]) => {
+                if (value) {
+                    url.searchParams.set(key, value);
+                }
+            });
+
+            return url;
+        }
+
+        /* Text inputs debounce so typing doesn't fire a request per keystroke. */
+        function applyFilters({ debounce = false } = {}) {
+            window.clearTimeout(filterDebounceTimer);
+            clearFiltersButton.disabled = !hasActiveFilters();
+
+            if (!debounce) {
+                fetchTasks();
+                return;
+            }
+
+            filterDebounceTimer = window.setTimeout(fetchTasks, 250);
+        }
+
         async function fetchTasks() {
             boardNotice = '';
             renderBoard([], 'loading');
 
             try {
-                const response = await fetch('http://localhost:8000/tasks');
+                const response = await fetch(buildTasksUrl());
                 if (!response.ok) {
                     throw new Error(`Request failed with status ${response.status}`);
                 }
@@ -1068,6 +1531,17 @@
                 : 'http://localhost:8000/tasks';
             const method = isEdit ? 'PATCH' : 'POST';
 
+            /* New task: a typed comment is validated up front and posted after the task exists. */
+            const pendingComment = !isEdit ? commentInput.value.trim() : '';
+            if (pendingComment) {
+                const { error } = validateCommentText(pendingComment);
+                if (error) {
+                    setCommentError(error);
+                    commentInput.focus();
+                    return;
+                }
+            }
+
             try {
                 const response = await fetch(endpoint, {
                     method,
@@ -1083,8 +1557,25 @@
                     return;
                 }
 
+                let commentFailure = '';
+                if (pendingComment) {
+                    const createdTask = await response.json();
+                    const commentResponse = await fetch(commentsUrl(createdTask.id), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: pendingComment })
+                    });
+
+                    if (!commentResponse.ok) {
+                        commentFailure = await getErrorMessage(commentResponse);
+                    }
+                }
+
                 closeTaskModal();
                 await fetchTasks();
+                if (commentFailure) {
+                    showBoardNotice(`Task created, but the comment was not added: ${commentFailure}`);
+                }
             } catch (error) {
                 setFormError(error.message || 'Unable to save task. Please try again.');
             }
@@ -1147,6 +1638,11 @@
                 return;
             }
 
+            if (event.target.closest('[data-action="clear-filters"]')) {
+                clearFilters();
+                return;
+            }
+
             const editButton = event.target.closest('.btn-edit');
             if (!editButton) {
                 return;
@@ -1159,6 +1655,20 @@
                 openTaskModal('edit', task);
             }
         });
+
+        function clearFilters() {
+            filtersForm.reset();
+            applyFilters();
+        }
+
+        filtersForm.addEventListener('input', (event) => {
+            applyFilters({ debounce: event.target.type !== 'select-one' });
+        });
+        filtersForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            applyFilters();
+        });
+        clearFiltersButton.addEventListener('click', clearFilters);
 
         newTaskButton.addEventListener('click', () => openTaskModal('create'));
         modalCloseButton.addEventListener('click', closeTaskModal);
