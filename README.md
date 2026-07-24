@@ -2,7 +2,7 @@
 
 A minimal learning-project skeleton for the Module 1 Task Tracker REST API, built with Python, FastAPI, and Pydantic. Persistence will use file-based JSON storage (per ADR), no database, no authentication, no Docker.
 
-This skeleton currently exposes only a single `/health` endpoint. CRUD functionality for tasks will be added in a later module.
+The API exposes CRUD endpoints for tasks and comments, plus search and filter combinations on `GET /tasks`. A single-file Kanban board frontend ([frontend/index.html](frontend/index.html)) talks to the API.
 
 ## Requirements
 
@@ -47,13 +47,46 @@ This skeleton currently exposes only a single `/health` endpoint. CRUD functiona
    Copy-Item .env.example .env
 ```
 
-## Running the server
+## Running the backend
+
+With the virtual environment activated:
 
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
 The API will be available at `http://localhost:8000`.
+
+## Opening the frontend
+
+The backend must be running first (the board calls `http://localhost:8000`). Serve the
+`frontend` folder on port 5500 — the origin the API's CORS config allows:
+
+**Linux/macOS:**
+```bash
+python3 -m http.server 5500 --directory frontend
+```
+
+**Windows (PowerShell):**
+```powershell
+python -m http.server 5500 --directory frontend
+```
+
+Then open `http://localhost:5500/index.html` in your browser.
+
+## Running the tests
+
+Tests use `pytest`. Install it into the virtual environment if it isn't already:
+
+```bash
+pip install pytest
+```
+
+Run the full suite from the project root:
+
+```bash
+pytest
+```
 
 ## Testing the health endpoint
 
