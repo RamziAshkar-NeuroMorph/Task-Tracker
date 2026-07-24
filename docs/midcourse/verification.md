@@ -69,20 +69,21 @@ throwaway tasks with a `[BC]` title prefix for the checks and deleted them after
 
 ## 4. Behavior contract — before/after refactor
 
-The contract the refactor must preserve. "Before" was verified on 2026-07-23 as
-described above; "After" gets filled in by re-running the same checks once the
-refactor is done.
+The contract the refactor must preserve. "Before" was verified on 2026-07-23. The
+refactor extracted the backend origin into a single `API_BASE_URL` constant in
+[frontend/index.html](../../frontend/index.html) and
+"After" was verified on 2026-07-24 by re-running the same checks. All 8 still pass.
 
 | ID | Behavior | Before refactor | After refactor |
 |----|----------|-----------------|----------------|
-| BC-1 | Three status columns render with counts matching the API; empty columns stay visible with a count of 0 and a placeholder | ✅ PASS — ToDo=3 / InProgress=1 / Done=1 matched; 2 emptied columns kept placeholders | ⏳ pending |
-| BC-2 | Cards sort by priority (High → Medium → Low) inside each column regardless of creation order | ✅ PASS — created High, Low, Medium; rendered High > Medium > Low | ⏳ pending |
-| BC-3 | Loading state shows between page open and first successful `GET /tasks`, then disappears | ✅ PASS — "Loading tasks…" shown during slowed fetch, gone after load | ⏳ pending |
-| BC-4 | Error state (message + Retry) when the backend is unreachable; Retry recovers once it's back | ✅ PASS — overlay shown, Retry reloaded the board | ⏳ pending |
-| BC-5 | Valid drag sends one `PATCH /tasks/{id}` with the new status; card, counts, and persisted state all update | ✅ PASS — body `{"status":"InProgress"}` captured; API confirms persistence | ⏳ pending |
-| BC-6 | Invalid drag (real 422) reverts the card and surfaces the server's `detail` message | ✅ PASS — exact transition-rule message shown in banner; card back in Done; API unchanged | ⏳ pending |
-| BC-7 | Filter bar renders above the board; search/status/priority/assignee all work and combine with AND | ✅ PASS — combined query returned exactly the one matching task | ⏳ pending |
-| BC-8 | New Task / Edit modals work: title validation (no request on invalid title), Esc/Cancel/backdrop dismissal, comments list + edit + delete + empty state | ✅ PASS — all 15 sub-checks | ⏳ pending |
+| BC-1 | Three status columns render with counts matching the API; empty columns stay visible with a count of 0 and a placeholder | PASS — ToDo=3 / InProgress=1 / Done=1 matched; 2 emptied columns kept placeholders | PASS — counts still match the API; 2 emptied columns kept placeholders |
+| BC-2 | Cards sort by priority (High → Medium → Low) inside each column regardless of creation order | PASS — created High, Low, Medium; rendered High > Medium > Low | PASS — rendered High > Medium > Low |
+| BC-3 | Loading state shows between page open and first successful `GET /tasks`, then disappears | PASS — "Loading tasks…" shown during slowed fetch, gone after load | PASS — "Loading tasks…" shown while the fetch was held open, gone once it resolved |
+| BC-4 | Error state (message + Retry) when the backend is unreachable; Retry recovers once it's back | PASS — overlay shown, Retry reloaded the board | PASS — overlay shown, Retry reloaded the board once reachable |
+| BC-5 | Valid drag sends one `PATCH /tasks/{id}` with the new status; card, counts, and persisted state all update | PASS — body `{"status":"InProgress"}` captured; API confirms persistence | PASS — same `PATCH /tasks/{id}` with `{"status":"InProgress"}`; persisted |
+| BC-6 | Invalid drag (real 422) reverts the card and surfaces the server's `detail` message | PASS — exact transition-rule message shown in banner; card back in Done; API unchanged | PASS — server message in banner; card back in Done; API unchanged |
+| BC-7 | Filter bar renders above the board; search/status/priority/assignee all work and combine with AND | PASS — combined query returned exactly the one matching task | PASS — `search=low&status=ToDo&assignee=...` returned exactly the one matching task |
+| BC-8 | New Task / Edit modals work: title validation (no request on invalid title), Esc/Cancel/backdrop dismissal, comments list + edit + delete + empty state | PASS — all 15 sub-checks | PASS — all 15 sub-checks |
 
 ## 5. Break-test evidence
 

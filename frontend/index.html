@@ -940,6 +940,9 @@
             Low: 2
         };
 
+        /* Backend origin. Change this one line to point the board at a different API. */
+        const API_BASE_URL = 'http://localhost:8000';
+
         const board = document.getElementById('board');
         const boardShell = document.querySelector('.board-shell');
         const errorOverlay = document.getElementById('error-overlay');
@@ -1234,7 +1237,7 @@
         /* --- Comments --- */
 
         function commentsUrl(taskId, commentId = '') {
-            return `http://localhost:8000/tasks/${taskId}/comments${commentId ? `/${commentId}` : ''}`;
+            return `${API_BASE_URL}/tasks/${taskId}/comments${commentId ? `/${commentId}` : ''}`;
         }
 
         function setCommentError(message) {
@@ -1446,7 +1449,7 @@
         }
 
         function buildTasksUrl() {
-            const url = new URL('http://localhost:8000/tasks');
+            const url = new URL(`${API_BASE_URL}/tasks`);
             Object.entries(readFilters()).forEach(([key, value]) => {
                 if (value) {
                     url.searchParams.set(key, value);
@@ -1527,8 +1530,8 @@
 
             const isEdit = Boolean(taskIdInput.value);
             const endpoint = isEdit
-                ? `http://localhost:8000/tasks/${taskIdInput.value}`
-                : 'http://localhost:8000/tasks';
+                ? `${API_BASE_URL}/tasks/${taskIdInput.value}`
+                : `${API_BASE_URL}/tasks`;
             const method = isEdit ? 'PATCH' : 'POST';
 
             /* New task: a typed comment is validated up front and posted after the task exists. */
@@ -1603,7 +1606,7 @@
             renderBoard(tasks, tasks.length === 0 ? 'empty' : 'ready');
 
             try {
-                const response = await fetch(`http://localhost:8000/tasks/${draggedTaskId}`, {
+                const response = await fetch(`${API_BASE_URL}/tasks/${draggedTaskId}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
