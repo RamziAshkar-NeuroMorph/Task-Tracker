@@ -8,6 +8,7 @@ VALID_TRANSITIONS: frozenset[tuple[TaskStatus, TaskStatus]] = frozenset({
     (TaskStatus.DONE, TaskStatus.IN_PROGRESS),
     (TaskStatus.DONE, TaskStatus.DONE),
     (TaskStatus.IN_PROGRESS, TaskStatus.IN_PROGRESS),
+    (TaskStatus.TODO, TaskStatus.TODO),
 })
 
 
